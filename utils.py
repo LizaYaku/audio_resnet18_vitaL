@@ -6,6 +6,7 @@ import torchvision
 from torchvision.transforms import *
 from scipy import stats
 from sklearn import metrics
+from torch.autograd import Variable
 import numpy as np
 
 class AverageMeter(object):
@@ -126,7 +127,20 @@ def calculate_stats(output, target):
 
     return stats
 
+# copied from Sabine's static images feature extraction repo
+def hook_fn(module, input, output):
+    output_features.append(output)
 
+def run_inference(model, data_loader, device=None):
+    global output_features
+    output_features = []
+    
+    with torch.no_grad():
+        for step,(spec, audio, name) in enumerate(data_loader):
+            spec = Variable(spec).to(device)
+            _ = model(spec.unsqueeze(1).float())
+    
+    return output_features
 
 
 

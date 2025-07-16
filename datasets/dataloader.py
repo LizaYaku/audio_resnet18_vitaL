@@ -17,39 +17,31 @@ import soundfile as sf
 class GetAudioVideoDataset(Dataset):
 
     def __init__(self, args, mode='train', transforms=None):
-        data2path = {}
-        classes = []
-        classes_ = []
         data = []
-        data2class = {}
 
-        with open(args.csv_path + 'stat.csv') as f:
-            csv_reader = csv.reader(f)
-            for row in csv_reader:
-                classes.append(row[0])
-
-        with open(args.csv_path  + args.test) as f:
-            csv_reader = csv.reader(f)
-            for item in csv_reader:
-                if item[1] in classes and os.path.exists(args.data_path + item[0][:-3] + 'wav')::
-                    data.append(item[0])
-                    data2class[item[0]] = item[1]
+        # to make it such that it works for items outside of the test stimuli
+        # print("line before loop")
+        for item in os.listdir(args.data_path):
+            # print("entered loop")
+            if os.path.splitext(item)[1] == '.wav': # all audios must be in .wav format
+                data.append(item)
+                data = sorted(data, key=lambda x: int(x[5:-4]))
+        print(data)
+        print(len(data))
 
         self.audio_path = args.data_path 
         self.mode = mode
         self.transforms = transforms
-        self.classes = sorted(classes)
-        self.data2class = data2class
 
         # initialize audio transform
         self._init_atransform()
+
         #  Retrieve list of audio and video files
         self.video_files = []
         
         for item in data:
             self.video_files.append(item)
         print('# of audio files = %d ' % len(self.video_files))
-        print('# of classes = %d' % len(self.classes))
 
 
     def _init_atransform(self):
@@ -60,9 +52,15 @@ class GetAudioVideoDataset(Dataset):
         return len(self.video_files)  
 
     def __getitem__(self, idx):
+        print(f"getting item {idx}")
         wav_file = self.video_files[idx]
-        # Audio
-        samples, samplerate = sf.read(self.audio_path + wav_file[:-3]+'wav')
+
+        try:
+            # Audio
+            samples, samplerate = sf.read(os.path.join(self.audio_path,wav_file))
+        except Exception as e:
+            print(f"Error loading {self.audio_path + wav_file}: {e}")
+            raise e
 
         # repeat in case audio is too short
         resamples = np.tile(samples,10)[:160000]
@@ -75,7 +73,7 @@ class GetAudioVideoDataset(Dataset):
         mean = np.mean(spectrogram)
         std = np.std(spectrogram)
         spectrogram = np.divide(spectrogram-mean,std+1e-9)
-
-        return spectrogram, resamples,self.classes.index(self.data2class[wav_file]),wav_file
+        
+        return spectrogram, resamples, wav_file
 
 
