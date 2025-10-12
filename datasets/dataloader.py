@@ -52,8 +52,8 @@ class GetAudioVideoDataset(Dataset):
         return len(self.video_files)  
 
     def __getitem__(self, idx):
-        print(f"getting item {idx}")
         wav_file = self.video_files[idx]
+        print(f"getting file {wav_file}, idx = {idx}\n")
 
         try:
             # Audio
