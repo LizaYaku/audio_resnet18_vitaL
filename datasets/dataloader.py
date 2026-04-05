@@ -88,13 +88,14 @@ class GetAudioVideoDataset(Dataset):
             noverlap=noverlap
         )
 
-        if len(resamples) < 512:
-            raise ValueError(f"Too short AFTER padding: {wav_file}, len={len(resamples)}")
+        # some debugging
+        # if len(resamples) < 512:
+        #     raise ValueError(f"Too short AFTER padding: {wav_file}, len={len(resamples)}")
 
-        if resamples.ndim != 1:
-            raise ValueError(f"Not 1D audio: {wav_file}, shape={resamples.shape}")
+        # if resamples.ndim != 1:
+        #     raise ValueError(f"Not 1D audio: {wav_file}, shape={resamples.shape}")
 
-        print(f"{wav_file}: len={len(resamples)}, shape={resamples.shape}")
+        # print(f"{wav_file}: len={len(resamples)}, shape={resamples.shape}")
 
         spectrogram = np.log(spectrogram+ 1e-7)
 
