@@ -1,5 +1,5 @@
 import os
-import cv2
+# import cv2
 import json
 import torch
 import csv
@@ -25,7 +25,7 @@ class GetAudioVideoDataset(Dataset):
             # print("entered loop")
             if os.path.splitext(item)[1] == '.wav': # all audios must be in .wav format
                 data.append(item)
-                data = sorted(data, key=lambda x: int(x[5:-4]))
+                data = sorted(data, key=lambda x: int(x[2:-4]))
         print(data)
         print(len(data))
 
@@ -58,16 +58,44 @@ class GetAudioVideoDataset(Dataset):
         try:
             # Audio
             samples, samplerate = sf.read(os.path.join(self.audio_path,wav_file))
+
+            if samples.ndim > 1:
+                samples = np.mean(samples, axis=1)
+        
         except Exception as e:
             print(f"Error loading {self.audio_path + wav_file}: {e}")
             raise e
 
         # repeat in case audio is too short
-        resamples = np.tile(samples,10)[:160000]
+        target_len = 160000  # or whatever you want
+
+        if len(samples) == 0:
+            raise ValueError(f"Empty audio file: {wav_file}")
+
+        repeats = int(np.ceil(target_len / len(samples)))
+        resamples = np.tile(samples, repeats)[:target_len]
 
         resamples[resamples > 1.] = 1.
         resamples[resamples < -1.] = -1.
-        frequencies, times, spectrogram = signal.spectrogram(resamples, samplerate, nperseg=512,noverlap=353)
+
+        nperseg = min(512, len(resamples))
+        noverlap = min(353, nperseg - 1)
+
+        frequencies, times, spectrogram = signal.spectrogram(
+            resamples,
+            samplerate,
+            nperseg=nperseg,
+            noverlap=noverlap
+        )
+
+        if len(resamples) < 512:
+            raise ValueError(f"Too short AFTER padding: {wav_file}, len={len(resamples)}")
+
+        if resamples.ndim != 1:
+            raise ValueError(f"Not 1D audio: {wav_file}, shape={resamples.shape}")
+
+        print(f"{wav_file}: len={len(resamples)}, shape={resamples.shape}")
+
         spectrogram = np.log(spectrogram+ 1e-7)
 
         mean = np.mean(spectrogram)
